@@ -13,7 +13,7 @@ public:
     void resized() override;
 
     // Charte V2 (fiche 02) et docs/09 : Gain | VU | Peak Reduction, rangée du bas
-    static constexpr int baseW = 634, baseH = 316;
+    static constexpr int baseW = 574, baseH = 292;
 
 private:
     class Content : public juce::Component

@@ -82,16 +82,16 @@ void AudioLabOptoEditor::Content::paint (juce::Graphics& g)
 void AudioLabOptoEditor::Content::resized()
 {
     auto& e = ed;
-    // Rangée principale (y 24 → 248) : Gain (centre x 75,5) | VU 330 × 224 | Peak Reduction (centre x 557,5)
-    e.kGain->setBounds (4, 62, 143, 150);
-    e.vu.setBounds (152, 24, 330, 224);
-    e.kPR->setBounds (486, 62, 143, 150);
-    // Rangée du bas (y 264) : affichage du VU à gauche, Compress / Limit sous le VU, petit Mix à droite
-    e.meterSeg.setBounds (24, 264, juce::roundToInt (e.meterSeg.idealWidth()), 28);
+    // Rangée principale (y 24 → 224) : Gain (centre x 75,5) | VU 270 × 200 | Peak Reduction (centre x 498,5)
+    e.kGain->setBounds (4, 68, 143, 150);
+    e.vu.setBounds (152, 24, 270, 200);
+    e.kPR->setBounds (427, 68, 143, 150);
+    // Rangée du bas (y 240) : affichage du VU à gauche, Compress / Limit sous le VU, petit Mix à droite
+    e.meterSeg.setBounds (24, 240, juce::roundToInt (e.meterSeg.idealWidth()), 28);
     e.meterSeg.setTooltip (U (helpMtr));
     const int mw = juce::roundToInt (e.modeSeg.idealWidth());
-    e.modeSeg.setBounds (152 + 165 - mw / 2, 264, mw, 28);
+    e.modeSeg.setBounds (152 + 135 - mw / 2, 240, mw, 28);
     e.modeSeg.setTooltip (U (helpMode));
     const int kw = juce::roundToInt (e.kMix->idealWidth());
-    e.kMix->setBounds (baseW - 24 - kw, 264, kw, 28);
+    e.kMix->setBounds (baseW - 24 - kw, 240, kw, 28);
 }
