@@ -4,7 +4,7 @@ Le compresseur optique d'**Audio Lab** (« Chimiste du son », Transversal Studi
 
 - **Même son que l'outil web** : le moteur est un portage ligne à ligne du processeur `al-opto` d'`Audio_Lab.html`. Le banc de test compare les deux versions : sortie identique (écart < 10⁻⁶) à 44,1 / 48 / 96 kHz, quelle que soit la taille des blocs du logiciel.
 - **Deux réglages, comme l'original** : Gain (rattrapage de sortie) et Peak Reduction (seuil et ratio couplés), Compress (3,5:1) / Limit (12:1). Cellule optique : attaque 10 ms, relâchement en deux temps (60 ms puis 0,5 à 5 s selon la densité du programme), étage à tubes et transfo.
-- **Interface Audio Lab** : potentiomètres à arc, VU-mètre à aiguille (réduction de gain ou niveau de sortie +4 / +10), petit Dry/Wet, thème clair / sombre, fenêtre redimensionnable, info-bulles en français.
+- **Interface Audio Lab** : potentiomètres à arc, VU-mètre à aiguille (réduction de gain ou niveau de sortie +4 / +10), petit Dry/Wet, thème sombre de la charte Transversal, fenêtre redimensionnable, info-bulles en français.
 
 Plan détaillé de l'interface et du moteur : `docs/09_GUI_Plugins_Opto_FET.md`.
 
@@ -41,6 +41,6 @@ python3 tests/verify_dsp.py     # moteur C++ ↔ code web d'Audio Lab (Node.js r
 
 ## Licence
 
-Code sous **GNU AGPLv3** (voir `LICENSE`), comme la version libre du framework [JUCE](https://juce.com) qu'il utilise. Police Inter sous licence SIL OFL 1.1 (`Resources/Inter-OFL-LICENSE.txt`).
+Code sous **GNU AGPLv3** (voir `LICENSE`), comme la version libre du framework [JUCE](https://juce.com) qu'il utilise. Police Poppins sous licence SIL OFL 1.1 (`Resources/Poppins-OFL-LICENSE.txt`).
 
 © Transversal Studio — Ludovic Diaz

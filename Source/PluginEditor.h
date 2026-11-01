@@ -3,8 +3,7 @@
 #include "Widgets.h"
 #include "VuMeter.h"
 
-class AudioLabOptoEditor : public juce::AudioProcessorEditor,
-                           private juce::DarkModeSettingListener
+class AudioLabOptoEditor : public juce::AudioProcessorEditor
 {
 public:
     explicit AudioLabOptoEditor (AudioLabOptoProcessor&);
@@ -13,7 +12,7 @@ public:
     void paint (juce::Graphics&) override {}
     void resized() override;
 
-    // Grille de 24 px (docs/06_GUI_Plugin_Compresseur.md) : Gain | VU | Peak Reduction, rangée du bas
+    // Charte V2 (fiche 02) et docs/09 : Gain | VU | Peak Reduction, rangée du bas
     static constexpr int baseW = 634, baseH = 316;
 
 private:
@@ -26,9 +25,7 @@ private:
         AudioLabOptoEditor& ed;
     };
 
-    void applyTheme();
     void refreshState();
-    void darkModeSettingChanged() override { applyTheme(); }
 
     AudioLabOptoProcessor& proc;
     audiolab::Theme theme;
@@ -41,7 +38,6 @@ private:
     audiolab::SegButtons meterSeg { theme, { "GR", "+4", "+10" } };
     audiolab::SegButtons modeSeg { theme, { "Compress", "Limit" } };
     std::unique_ptr<juce::ParameterAttachment> bypassAtt;
-    juce::Array<juce::Component*> body;
     bool bypassed = false;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioLabOptoEditor)

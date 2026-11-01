@@ -23,15 +23,15 @@ AudioLabOptoEditor::AudioLabOptoEditor (AudioLabOptoProcessor& p)
     addAndMakeVisible (content);
     auto& ap = proc.apvts;
     auto prm = [&] (const char* id) -> juce::RangedAudioParameter& { return *ap.getParameter (id); };
-    auto acc = [] (const Pal& q) { return q.accent; };
 
-    kGain = std::make_unique<ArcKnob> (theme, prm (params::gain), "Gain", "dB", acc, ArcKnob::Size::md,
+    // couleurs de la charte : gain = teal secondaire, Peak Reduction (seuil + ratio) = teal, Mix = teal secondaire
+    kGain = std::make_unique<ArcKnob> (theme, prm (params::gain), "Gain", "dB", Family::teal2, ArcKnob::Size::md,
         [] (float v) { return (v > 0 ? "+" : "") + String (v, 1); }, 0.0f, U (helpGain));
     kGain->hint = U ("rattrapage de sortie");
-    kPR = std::make_unique<ArcKnob> (theme, prm (params::peakRed), "Peak Reduction", "%", acc, ArcKnob::Size::md,
+    kPR = std::make_unique<ArcKnob> (theme, prm (params::peakRed), "Peak Reduction", "%", Family::teal, ArcKnob::Size::md,
         [] (float v) { return String (juce::roundToInt (v)); }, 0.0f, U (helpPR));
     kPR->hint = U ("seuil + ratio couplés");
-    kMix = std::make_unique<ArcKnob> (theme, prm (params::mix), "Mix", "%", acc, ArcKnob::Size::xs,
+    kMix = std::make_unique<ArcKnob> (theme, prm (params::mix), "Mix", "%", Family::teal2, ArcKnob::Size::xs,
         [] (float v) { return String (juce::roundToInt (v)); }, 0.0f, U (helpMix));
 
     vu.setModes ({ -18.0f, -12.0f }, { "OUTPUT  +4", "OUTPUT  +10" }, false);
@@ -44,11 +44,8 @@ AudioLabOptoEditor::AudioLabOptoEditor (AudioLabOptoProcessor& p)
         bypassed = v > 0.5f; refreshState(); }, nullptr);
     bypassAtt->sendInitialUpdate();
 
-    body = { kGain.get(), kPR.get(), kMix.get(), &vu, &meterSeg, &modeSeg };
-    for (auto* c : body) content.addAndMakeVisible (c);
-    juce::Desktop::getInstance().addDarkModeSettingListener (this);
-
-    applyTheme();
+    for (auto* c : std::initializer_list<juce::Component*> { kGain.get(), kPR.get(), kMix.get(), &vu, &meterSeg, &modeSeg })
+        content.addAndMakeVisible (c);
     const double sc = juce::jlimit (0.6, 2.0, (double) proc.ui.getProperty ("scale", 1.0));   // lu avant les limites
     setResizable (true, true);
     getConstrainer()->setFixedAspectRatio ((double) baseW / baseH);
@@ -59,28 +56,14 @@ AudioLabOptoEditor::AudioLabOptoEditor (AudioLabOptoProcessor& p)
 
 AudioLabOptoEditor::~AudioLabOptoEditor()
 {
-    juce::Desktop::getInstance().removeDarkModeSettingListener (this);
     tooltips.setLookAndFeel (nullptr);
     setLookAndFeel (nullptr);
 }
 
-void AudioLabOptoEditor::applyTheme()
-{
-    // Clair / sombre selon le réglage de l'ordinateur (« themeOverride » sert seulement aux tests)
-    const String t = proc.ui.getProperty ("themeOverride", "auto").toString();
-    const bool dark = t == "dark" || (t != "light" && juce::Desktop::getInstance().isDarkModeActive());
-    theme.setDark (dark);
-    lnf.refresh();
-    sendLookAndFeelChange();
-    content.repaint();
-    for (auto* c : content.getChildren()) c->repaint();
-}
-
 void AudioLabOptoEditor::refreshState()
 {
-    for (auto* c : body) { c->setAlpha (bypassed ? 0.35f : 1.0f); c->setEnabled (! bypassed); }
-    meterSeg.setEnabled (true); meterSeg.setAlpha (1.0f);   // le choix d'affichage reste possible
-    content.repaint();
+    // Charte V2 : en bypass, la lampe du VU s'éteint ; les réglages restent accessibles
+    vu.setLampOff (bypassed);
 }
 
 void AudioLabOptoEditor::resized()
@@ -93,7 +76,7 @@ void AudioLabOptoEditor::resized()
 
 void AudioLabOptoEditor::Content::paint (juce::Graphics& g)
 {
-    g.fillAll (ed.theme.pal().bg2);
+    g.fillAll (ed.theme.pal().bg);
 }
 
 void AudioLabOptoEditor::Content::resized()

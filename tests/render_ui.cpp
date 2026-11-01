@@ -50,19 +50,18 @@ int main (int argc, char** argv)
         ed.reset (proc->createEditorAndMakeActive()); ed->setVisible (true);
     };
     auto set = [&] (const char* id, float v) { auto* p = proc->apvts.getParameter (id); p->setValueNotifyingHost (p->convertTo0to1 (v)); };
-    auto theme = [&] (const char* t) { proc->ui.setProperty ("themeOverride", t, nullptr); };
     auto meter = [&] (int m) { proc->ui.setProperty ("meter", m, nullptr); };
 
     using namespace audiolab;
-    steps.push_back ({ 0,    [&] { theme ("light"); meter (0); set (params::peakRed, 60); set (params::gain, 6); rebuild(); } });
-    steps.push_back ({ 2000, [&] { shot ("01_clair_GR"); meter (1); rebuild(); } });
-    steps.push_back ({ 1500, [&] { shot ("02_clair_sortie_plus4"); theme ("dark"); meter (0); set (params::mode, 1); set (params::mix, 60); rebuild(); } });
-    steps.push_back ({ 2000, [&] { shot ("03_sombre_limit_mix60"); meter (2); rebuild(); } });
-    steps.push_back ({ 1500, [&] { shot ("04_sombre_sortie_plus10"); set (params::bypass, 1); rebuild(); } });
-    steps.push_back ({ 800,  [&] { shot ("05_sombre_bypass"); set (params::bypass, 0); theme ("light"); meter (0); rebuild();
+    steps.push_back ({ 0,    [&] { meter (0); set (params::peakRed, 60); set (params::gain, 6); rebuild(); } });
+    steps.push_back ({ 2000, [&] { shot ("01_GR"); meter (1); rebuild(); } });
+    steps.push_back ({ 1500, [&] { shot ("02_sortie_plus4"); meter (0); set (params::mode, 1); set (params::mix, 60); rebuild(); } });
+    steps.push_back ({ 2000, [&] { shot ("03_limit_mix60"); meter (2); rebuild(); } });
+    steps.push_back ({ 1500, [&] { shot ("04_sortie_plus10"); set (params::bypass, 1); rebuild(); } });
+    steps.push_back ({ 800,  [&] { shot ("05_bypass"); set (params::bypass, 0); meter (0); rebuild();
                                    ed->setSize (AudioLabOptoEditor::baseW * 6 / 10, AudioLabOptoEditor::baseH * 6 / 10); } });
-    steps.push_back ({ 1000, [&] { shot ("06_clair_60pc"); ed->setSize (AudioLabOptoEditor::baseW * 2, AudioLabOptoEditor::baseH * 2); } });
-    steps.push_back ({ 1000, [&] { shot ("07_clair_200pc"); juce::MessageManager::getInstance()->stopDispatchLoop(); } });
+    steps.push_back ({ 1000, [&] { shot ("06_60pc"); ed->setSize (AudioLabOptoEditor::baseW * 2, AudioLabOptoEditor::baseH * 2); } });
+    steps.push_back ({ 1000, [&] { shot ("07_200pc"); juce::MessageManager::getInstance()->stopDispatchLoop(); } });
 
     std::function<void (size_t)> next = [&] (size_t i)
     {
