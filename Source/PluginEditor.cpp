@@ -5,14 +5,14 @@ using juce::String;
 
 static String U (const char* s) { return String::fromUTF8 (s); }
 
-static const char* helpGain = "Rattrapage de sortie (étage à tubes). La compression baisse le niveau : on le remonte ici. "
-                              "Comparez toujours à niveau égal (bypass) : plus fort paraît « mieux ».";
-static const char* helpPR   = "Peak Reduction : un seul bouton qui règle à la fois le seuil et la quantité de compression. "
-                              "Plus on tourne, plus la cellule optique travaille. La réaction est lente et musicale.";
-static const char* helpMode = "Compress : ratio doux (3,5:1). Limit : ratio fort (12:1), pour tenir les crêtes.";
-static const char* helpMtr  = "Ce que montre l'aiguille : GR = réduction de gain ; +4 / +10 = niveau de sortie "
+static const char* helpGain = "Output make-up (tube stage). Compression lowers the level: bring it back up here. "
+                              "Always compare at equal loudness (bypass): louder sounds \"better\".";
+static const char* helpPR   = "Peak Reduction: a single knob that sets both the threshold and the amount of compression. "
+                              "The further you turn it, the harder the optical cell works. The response is slow and musical.";
+static const char* helpMode = "Compress: gentle ratio (3.5:1). Limit: high ratio (12:1), to hold the peaks.";
+static const char* helpMtr  = "What the needle shows: GR = gain reduction; +4 / +10 = output level "
                               "(0 VU = −18 / −12 dBFS).";
-static const char* helpMix  = "Dry/Wet : mélange le son traité avec le son direct (compression parallèle).";
+static const char* helpMix  = "Dry/Wet: blends the processed sound with the direct sound (parallel compression).";
 
 AudioLabOptoEditor::AudioLabOptoEditor (AudioLabOptoProcessor& p)
     : AudioProcessorEditor (&p), proc (p),
@@ -27,10 +27,10 @@ AudioLabOptoEditor::AudioLabOptoEditor (AudioLabOptoProcessor& p)
     // couleurs de la charte : gain = teal secondaire, Peak Reduction (seuil + ratio) = teal, Mix = teal secondaire
     kGain = std::make_unique<ArcKnob> (theme, prm (params::gain), "Gain", "dB", Family::teal2, ArcKnob::Size::md,
         [] (float v) { return (v > 0 ? "+" : "") + String (v, 1); }, 0.0f, U (helpGain));
-    kGain->hint = U ("rattrapage de sortie");
+    kGain->hint = U ("output make-up");
     kPR = std::make_unique<ArcKnob> (theme, prm (params::peakRed), "Peak Reduction", "%", Family::teal, ArcKnob::Size::md,
         [] (float v) { return String (juce::roundToInt (v)); }, 0.0f, U (helpPR));
-    kPR->hint = U ("seuil + ratio couplés");
+    kPR->hint = U ("linked threshold + ratio");
     kMix = std::make_unique<ArcKnob> (theme, prm (params::mix), "Mix", "%", Family::teal2, ArcKnob::Size::xs,
         [] (float v) { return String (juce::roundToInt (v)); }, 0.0f, U (helpMix));
 

@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.22)
 set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64" CACHE STRING "")
 set(CMAKE_OSX_DEPLOYMENT_TARGET "10.13" CACHE STRING "")
 
-project(AudioLabOpto VERSION 1.1.0 LANGUAGES C CXX)
+project(AudioLabOpto VERSION 1.2.0 LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -37,8 +37,8 @@ endif()
 
 juce_add_plugin(AudioLabOpto
     PRODUCT_NAME "Audio Lab Opto"
-    PLUGIN_NAME "Audio Lab Opto"
-    DESCRIPTION "Compresseur optique d'Audio Lab (Chimiste du son)"
+    PLUGIN_NAME "Lab Opto"
+    DESCRIPTION "Optical compressor from Audio Lab (Chimiste du son)"
     COMPANY_NAME "Transversal Studio"
     COMPANY_WEBSITE "https://transversalstudio.fr"
     COMPANY_EMAIL "ludo@transversalstudio.fr"
