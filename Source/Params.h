@@ -9,6 +9,10 @@ inline constexpr const char* peakRed = "peakRed";
 inline constexpr const char* mode    = "mode";
 inline constexpr const char* mix     = "mix";
 inline constexpr const char* bypass  = "bypass";
+// 2.0.0 (réglages avancés)
+inline constexpr const char* oversampling = "oversampling";
+inline constexpr const char* emphasis     = "emphasis";
+inline constexpr int oversamplingDefault = 1;   // 2× : repliement < −80 dB (−97 dB au réglage de référence)
 
 inline juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
 {
@@ -29,6 +33,11 @@ inline juce::AudioProcessorValueTreeState::ParameterLayout createLayout()
     fl (mix, "Dry/Wet", NormalisableRange<float> (0, 100, 0.1f), 100, "%",
         [] (float v, int) { return String (roundToInt (v)) + " %"; });
     l.add (std::make_unique<AudioParameterBool> (ParameterID { bypass, 1 }, "Bypass", false));
+    // 2.0.0 : suréchantillonnage du moteur (Off = aucune latence) ; emphase aiguë du side-chain (R37 de l'original)
+    l.add (std::make_unique<AudioParameterChoice> (ParameterID { oversampling, 2 }, "Oversampling",
+        StringArray { "Off", String::fromUTF8 ("2×"), String::fromUTF8 ("4×"), String::fromUTF8 ("8×") }, oversamplingDefault));
+    l.add (std::make_unique<AudioParameterFloat> (ParameterID { emphasis, 2 }, "SC Emphasis", NormalisableRange<float> (0, 100, 0.1f), 0,
+        AudioParameterFloatAttributes().withLabel ("%").withStringFromValueFunction ([] (float v, int) { return String (roundToInt (v)) + " %"; })));
     return l;
 }
 } // namespace audiolab::params

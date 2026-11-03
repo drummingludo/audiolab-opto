@@ -11,6 +11,7 @@ AudioLabOptoProcessor::AudioLabOptoProcessor()
       ui ("ui")
 {
     bypassParam = apvts.getParameter (params::bypass);
+    chain.prepare (48000, osChoice());   // suréchantillonneurs conçus d'avance : latence juste même avant prepareToPlay
     ui.setProperty ("meter", 0, nullptr);
     ui.setProperty ("scale", 1.0, nullptr);
 }
@@ -24,18 +25,37 @@ bool AudioLabOptoProcessor::isBusesLayoutSupported (const BusesLayout& layouts) 
 
 OptoParams AudioLabOptoProcessor::currentParams() const
 {
-    // Comme optoParams() dans Audio Lab : emphase 0, tube 0,3, pas de bypass interne
     OptoParams p;
     p.gainDb = getParam (params::gain);
     p.peakRed = getParam (params::peakRed);
     p.limit = getParam (params::mode) > 0.5f;
+    p.emphasis = getParam (params::emphasis) / 100.0;
     return p;
+}
+
+// Bascule du suréchantillonnage (sortie à zéro pendant le fondu) : moteur remis à zéro, latence mise à jour
+void AudioLabOptoProcessor::applyOversampling (int choice)
+{
+    chain.setOversampling (choice);
+    chain.setParams (currentParams());
+    const int own = chain.latency();
+    const int lat = constantLatency ? chain.maxLatency() : own;
+    wetPad = lat - own;
+    std::fill (padL.begin(), padL.end(), 0.0f);
+    std::fill (padR.begin(), padR.end(), 0.0f);
+    if (lat != latency) { latency = lat; setLatencySamples (lat); }
 }
 
 void AudioLabOptoProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    core.prepare (sampleRate);
-    core.setParams (currentParams());
+    // Pro Tools n'aime pas les changements de latence : en AAX, latence fixe (celle du 8×), complétée par un retard
+    if (wrapperType == wrapperType_AAX) constantLatency = true;
+    chain.prepare (sampleRate, osChoice());
+    for (auto* v : { &dryL, &dryR, &padL, &padR }) v->assign ((size_t) ringLen, 0.0f);
+    ringW = 0;
+    latency = -1;
+    applyOversampling (osChoice());
+    swGain = 1; swDir = 0; swStep = (float) (1.0 / (0.010 * sampleRate));
     const int block = std::max (512, samplesPerBlock);
     wetL.assign ((size_t) block, 0.0f);
     wetR.assign ((size_t) block, 0.0f);
@@ -55,26 +75,45 @@ void AudioLabOptoProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce
     for (int ch = nIn; ch < getTotalNumOutputChannels(); ++ch) buffer.clear (ch, 0, total);
     if (nIn == 0 || total == 0) return;
 
-    core.setParams (currentParams());
+    chain.setParams (currentParams());
     mixSm.setTargetValue (getParam (params::mix) / 100.0f);
     bypassSm.setTargetValue (getParam (params::bypass) > 0.5f ? 1.0f : 0.0f);
+    // nouveau choix de suréchantillonnage : fondu de sortie, bascule, fondu d'entrée (aucun clic)
+    if (osChoice() != chain.oversampling() && swDir == 0) swDir = -1;
 
     float* L = buffer.getWritePointer (0);
     float* R = nIn > 1 ? buffer.getWritePointer (1) : nullptr;
-    const int chunkMax = (int) wetL.size();
+    const int chunkMax = std::min ((int) wetL.size(), 128);   // petits morceaux : la bascule tombe juste après la fin du fondu
+    const int rm = ringLen - 1;
     for (int off = 0; off < total; off += chunkMax)
     {
         const int n = std::min (chunkMax, total - off);
+        if (swDir < 0 && swGain <= 0.0f) { applyOversampling (osChoice()); swDir = 1; }
         const float* inR = R != nullptr ? R + off : L + off;   // mono : R = L (comme inp[1]||inp[0])
-        core.process (L + off, inR, wetL.data(), wetR.data(), n);
+        chain.process (L + off, inR, wetL.data(), wetR.data(), n);
         for (int i = 0; i < n; ++i)
         {
-            const float xl = L[off + i], xr = inR[i];
+            const float xl0 = L[off + i], xr0 = inR[i];
+            // sec retardé de la latence (Dry/Wet sans filtre en peigne, bypass aligné)
+            dryL[(size_t) ringW] = xl0; dryR[(size_t) ringW] = xr0;
+            const int rd = (ringW - latency) & rm;
+            const float xl = dryL[(size_t) rd], xr = dryR[(size_t) rd];
+            // traité retardé du complément (AAX : latence fixe)
+            padL[(size_t) ringW] = wetL[(size_t) i]; padR[(size_t) ringW] = wetR[(size_t) i];
+            const int rp = (ringW - wetPad) & rm;
+            const float wl = padL[(size_t) rp], wr = padR[(size_t) rp];
+            ringW = (ringW + 1) & rm;
             const float m = mixSm.getNextValue(), b = bypassSm.getNextValue();
             // Dry/Wet à puissance constante (compression parallèle), puis bypass en fondu
             const float gd = std::cos (m * juce::MathConstants<float>::halfPi), gw = std::sin (m * juce::MathConstants<float>::halfPi);
-            const float pl = xl * gd + wetL[(size_t) i] * gw, pr = xr * gd + wetR[(size_t) i] * gw;
-            const float ol = pl * (1 - b) + xl * b, orr = pr * (1 - b) + xr * b;
+            const float pl = xl * gd + wl * gw, pr = xr * gd + wr * gw;
+            float ol = pl * (1 - b) + xl * b, orr = pr * (1 - b) + xr * b;
+            if (swDir != 0)
+            {
+                swGain = juce::jlimit (0.0f, 1.0f, swGain + (float) swDir * swStep);
+                if (swDir > 0 && swGain >= 1.0f) swDir = 0;
+                ol *= swGain; orr *= swGain;
+            }
             L[off + i] = ol;
             if (R != nullptr) R[off + i] = orr;
             // niveau de sortie (AES17 : un sinus de crête A donne 20·log10(A) dBFS)
@@ -90,7 +129,7 @@ AudioLabOptoProcessor::Meters AudioLabOptoProcessor::readMeters()
 {
     Meters m;
     m.active = juce::Time::getMillisecondCounter() - lastBlockMs.load() < 250;
-    const float gr = core.takeGRMin();
+    const float gr = chain.engine().takeGRMin();
     m.grDb = getParam (params::bypass) > 0.5f ? 0.0f : gr;
     m.outDb = outDb.load();
     return m;

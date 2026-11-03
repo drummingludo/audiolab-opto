@@ -1,5 +1,13 @@
-"""Banc de test du moteur opto : compare le plugin (C++) au vrai code d'Audio Lab (JS, worklet al-opto),
-puis mesure la courbe statique (Peak Reduction, Compress / Limit) et les temps d'attaque / relâchement."""
+"""Banc de test du moteur opto : courbe statique (Peak Reduction, Compress / Limit), temps d'attaque / relâchement.
+
+Version 2.0.0 (03/11/2026) : le plugin devient volontairement différent du code web d'Audio_Lab.html
+(décision : les plugins sont la version « pro », la page web ne change pas pour l'instant) : détection après
+l'étage de gain, stéréo en somme des puissances, emphase du side-chain, lampes asymétriques, suréchantillonnage,
+filtres de sortie identiques à toutes les fréquences d'échantillonnage. Retiré : la comparaison échantillon par
+échantillon plugin ↔ web (1) et « même résultat que le web » selon la taille des blocs. Gardé : l'empreinte de la
+copie de référence du code web, l'indépendance à la taille des blocs (comparée au plugin lui-même), la courbe
+statique (la contre-réaction la reproduit exactement) et les temps de la cellule (compensés dans la boucle).
+Le banc chiffré de la version 2.0 est tests/quality_test.cpp (sans JUCE, sans Node.js)."""
 import hashlib, json, os, subprocess, sys, numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -14,15 +22,12 @@ def check(cond, msg):
     print(("  OK   " if cond else "  ÉCHEC ") + msg)
     OK &= bool(cond)
 
-def run_both(fs, x, prm, block=128):
+def run_core(fs, x, prm, block=128):
     inp = os.path.join(TMP, "in.f32"); x.astype(np.float32).tofile(inp)
-    pj = os.path.join(TMP, "p.json")
-    json.dump(dict(gainDb=prm["gain"], peakRed=prm["pr"], limit=int(prm["limit"]), emphasis=0, tube=0.3, bypass=0), open(pj, "w"))
     pt = os.path.join(TMP, "p.txt"); open(pt, "w").write("%r %r %d" % (prm["gain"], prm["pr"], int(prm["limit"])))
-    oj, oc = os.path.join(TMP, "oj.f32"), os.path.join(TMP, "oc.f32")
-    subprocess.run(["node", os.path.join(HERE, "ref_run.js"), str(fs), pj, inp, oj], check=True)
+    oc = os.path.join(TMP, "oc.f32")
     subprocess.run([os.path.join(HERE, "core_run"), str(fs), pt, inp, oc, str(block)], check=True)
-    return np.fromfile(oj, np.float32).reshape(-1, 2), np.fromfile(oc, np.float32).reshape(-1, 2)
+    return np.fromfile(oc, np.float32).reshape(-1, 2)
 
 def P(**k):
     base = dict(gain=0.0, pr=40.0, limit=False); base.update(k); return base
@@ -46,23 +51,12 @@ print("\n0) Copie du code web utilisée comme référence")
 check(hashlib.sha256(open(os.path.join(HERE, "opto_ref.js"), "rb").read()).hexdigest() == REF_SHA,
       "opto_ref.js = classe OptoDSP d'Audio_Lab.html (empreinte SHA-256)")
 
-print("\n1) Comparaison plugin (C++) ↔ Audio Lab (code web d'origine)")
-cases = [("Réglages par défaut (PR 40, Compress)", P()),
-         ("Voix douce (PR 30, gain +4)", P(pr=30, gain=4)),
-         ("Basse tenue (PR 60, gain +8)", P(pr=60, gain=8)),
-         ("Limit (PR 70)", P(pr=70, limit=True)),
-         ("Extrêmes (PR 100, gain +30)", P(pr=100, gain=30)),
-         ("Sans compression (PR 0, gain -20)", P(pr=0, gain=-20))]
-for fs in (44100, 48000, 96000):
-    x = music(fs)
-    for name, prm in cases:
-        oj, oc = run_both(fs, x, prm)
-        d = np.max(np.abs(oj - oc)); same = np.mean(oj == oc) * 100
-        check(d <= 1e-6 * max(1, np.max(np.abs(oj))), f"{fs} Hz · {name} : écart max {d:.1e}, {same:.2f} % des échantillons identiques au bit près")
+print("\n1) Indépendance à la taille des blocs envoyés par le logiciel hôte (référence : blocs de 128)")
 x = music(48000)
+ref = run_core(48000, x, P(pr=60, gain=8))
 for b in (1, 64, 100, 512, 1024, 4096):
-    oj, oc = run_both(48000, x, cases[2][1], block=b)
-    check(np.max(np.abs(oj - oc)) <= 1e-6, f"blocs de {b} éch. (logiciel hôte) : même résultat que le web")
+    oc = run_core(48000, x, P(pr=60, gain=8), block=b)
+    check(np.max(np.abs(oc - ref)) <= 1e-6, f"blocs de {b} éch. : même résultat qu'en blocs de 128")
 
 def trace(fs, x, prm, block=16):
     """Réduction de gain du moteur, bloc par bloc (dB, ≤ 0)."""
@@ -79,7 +73,7 @@ def theory(lvl, pr, limit):
     return (1 / ratio - 1) * over
 
 fs = 48000
-print("\n2) Courbe statique du détecteur (Peak Reduction, Compress / Limit) — niveau constant")
+print("\n2) Courbe statique (Peak Reduction, Compress / Limit) : niveau constant, détection après l'étage de gain")
 for pr, limit in [(40, False), (80, False), (70, True), (100, True)]:
     errs = []
     for lvl in range(-60, 7, 3):

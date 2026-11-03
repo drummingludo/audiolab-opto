@@ -2,9 +2,9 @@
 
 Le compresseur optique d'**Audio Lab** (« Chimiste du son », Transversal Studio), inspiré du LA-2A, en plugin **VST3 / AU** pour Logic Pro, Ableton Live, FL Studio, Cubase, Reaper, Studio One, Bitwig…, et **AAX** pour Pro Tools (version de test non signée, voir plus bas).
 
-- **Même son que l'outil web** : le moteur est un portage ligne à ligne du processeur `al-opto` d'`Audio_Lab.html`. Le banc de test compare les deux versions : sortie identique (écart < 10⁻⁶) à 44,1 / 48 / 96 kHz, quelle que soit la taille des blocs du logiciel.
+- **Version 2.0.0, qualité « pro »** : moteur d'abord porté du processeur `al-opto` d'`Audio_Lab.html`, puis amélioré pour le plugin (la page web ne change pas) : cellule alimentée par la sortie (contre-réaction, comme le LA-2A), étage à lampes asymétrique (H2 dominante, 0,23 % au niveau nominal), suréchantillonnage ×2 / ×4 / ×8 (défaut ×2 : repliement −97 dB au lieu de −28 dB), filtres de sortie identiques à toutes les fréquences d'échantillonnage, emphase aiguë du side-chain réglable. Détails et mesures : `docs/09_GUI_Plugins_Opto_FET.md` § 7.
 - **Deux réglages, comme l'original** : Gain (rattrapage de sortie) et Peak Reduction (seuil et ratio couplés), Compress (3,5:1) / Limit (12:1). Cellule optique : attaque 10 ms, relâchement en deux temps (60 ms puis 0,5 à 5 s selon la densité du programme), étage à tubes et transfo.
-- **Interface Audio Lab** : potentiomètres à arc, VU-mètre à aiguille (réduction de gain ou niveau de sortie +4 / +10), petit Dry/Wet, thème sombre de la charte Transversal, fenêtre redimensionnable, info-bulles en français.
+- **Interface Audio Lab** : potentiomètres à arc, VU-mètre à aiguille (réduction de gain ou niveau de sortie +4 / +10), petit Dry/Wet, thème sombre de la charte Transversal, fenêtre redimensionnable, info-bulles en anglais.
 
 Plan détaillé de l'interface et du moteur : `docs/09_GUI_Plugins_Opto_FET.md`.
 
@@ -19,7 +19,7 @@ Mode d'emploi : fichier `LISEZ-MOI.txt` dans chaque archive.
 
 ### Pro Tools (AAX)
 
-Chaque archive contient aussi `Audio Lab Opto.aaxplugin` (Mac universel, Windows 64 bits), fabriqué avec le SDK AAX fourni par JUCE (GPL v3). Il n'est **pas encore signé** par PACE : il ne se charge que dans **Pro Tools Developer**. Aucune latence : rien de particulier à régler dans Pro Tools.
+Chaque archive contient aussi `Audio Lab Opto.aaxplugin` (Mac universel, Windows 64 bits), fabriqué avec le SDK AAX fourni par JUCE (GPL v3). Il n'est **pas encore signé** par PACE : il ne se charge que dans **Pro Tools Developer**. Dans Pro Tools, la latence est fixe (celle du suréchantillonnage ×8, 78 échantillons), quel que soit le réglage Oversampling : Pro Tools la compense automatiquement.
 
 ## Fabrication
 
@@ -36,7 +36,8 @@ Tests (Linux ou Mac) :
 cmake -B build -DALO_TESTS=ON -DALO_STANDALONE=ON
 cmake --build build --target ALOProcessorTest ALORenderUI
 g++ -O2 -std=c++17 -ISource tests/core_run.cpp -o tests/core_run
-python3 tests/verify_dsp.py     # moteur C++ ↔ code web d'Audio Lab (Node.js requis)
+python3 tests/verify_dsp.py     # courbes statiques, temps, indépendance aux blocs
+g++ -O2 -std=c++17 -I Source tests/quality_test.cpp -o qt && ./qt   # banc qualité 2.0 (sans JUCE)
 ```
 
 ## Licence
